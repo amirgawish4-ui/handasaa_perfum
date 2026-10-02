@@ -34,12 +34,12 @@ export default function Home() {
   const TBR_URL = "https://tepar-ten.vercel.app/";
   
   // 📍 رقم الواتساب:
-  const WHATSAPP_NUMBER = "20106651085";
+  const WHATSAPP_NUMBER = "201066510085";
   
   const LOGO_URL = "https://i.postimg.cc/BbXdxX7G/logo.jpg";
   const LINKEDIN_URL = "https://www.linkedin.com/in/amir-gawish-3b7173403?utm_source=share_via&utm_content=profile&utm_medium=member_ios";
   
-  const ADMIN_PASSWORD = "123";
+  const ADMIN_PASSWORD = "karim123";
 
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -59,6 +59,13 @@ export default function Home() {
   // بيانات من Supabase
   const [categories, setCategories] = useState<Category[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+
+  // إعدادات المتجر (الورد والإضافات) قابلة للتعديل من الأدمن
+  const [storeSettings, setStoreSettings] = useState({
+    rosePrice: 30,
+    babyBreathPrice: 50,
+    butterflyPrice: 30,
+  });
 
   // جلب البيانات من Supabase عند فتح الموقع
   useEffect(() => {
@@ -105,12 +112,6 @@ export default function Home() {
 
     fetchData();
   }, []);
-
-  const [storeSettings, setStoreSettings] = useState({
-    rosePrice: 30,
-    babyBreathPrice: 50,
-    butterflyPrice: 30,
-  });
 
   const getShippingFee = (gov: string) => {
     const tier65 = ['كفر الشيخ', 'البحيرة'];
@@ -209,11 +210,18 @@ export default function Home() {
   const [newProdDesc, setNewProdDesc] = useState('');
   const [newProdImg, setNewProdImg] = useState('');
   
-  const [price25, setPrice25] = useState('');
-  const [price35, setPrice35] = useState('');
-  const [price50, setPrice50] = useState('');
-  const [price100, setPrice100] = useState('');
   const [regularPrice, setRegularPrice] = useState('');
+  
+  // حقول الأحجام الاختيارية الجديدة لأي منتج
+  const [enableSizes, setEnableSizes] = useState(false);
+  const [size1Name, setSize1Name] = useState('25ml');
+  const [size1Price, setSize1Price] = useState('');
+  const [size2Name, setSize2Name] = useState('35ml');
+  const [size2Price, setSize2Price] = useState('');
+  const [size3Name, setSize3Name] = useState('50ml');
+  const [size3Price, setSize3Price] = useState('');
+  const [size4Name, setSize4Name] = useState('100ml');
+  const [size4Price, setSize4Price] = useState('');
 
   const [newCatName, setNewCatName] = useState('');
   const [newCatId, setNewCatId] = useState('');
@@ -232,14 +240,19 @@ export default function Home() {
       price: 0,
     };
 
-    if (newProdCat === 'perfumes') {
-      productData.sizes = {
-        '25ml': parseFloat(price25) || 150,
-        '35ml': parseFloat(price35) || 220,
-        '50ml': parseFloat(price50) || 350,
-        '100ml': parseFloat(price100) || 600,
-      };
-      productData.price = productData.sizes['50ml'];
+    if (enableSizes) {
+      const sizesObj: Record<string, number> = {};
+      if (size1Name && size1Price) sizesObj[size1Name] = parseFloat(size1Price);
+      if (size2Name && size2Price) sizesObj[size2Name] = parseFloat(size2Price);
+      if (size3Name && size3Price) sizesObj[size3Name] = parseFloat(size3Price);
+      if (size4Name && size4Price) sizesObj[size4Name] = parseFloat(size4Price);
+
+      if (Object.keys(sizesObj).length > 0) {
+        productData.sizes = sizesObj;
+        productData.price = Object.values(sizesObj)[0] || 200;
+      } else {
+        productData.price = parseFloat(regularPrice) || 200;
+      }
     } else {
       productData.price = parseFloat(regularPrice) || 200;
     }
@@ -253,7 +266,9 @@ export default function Home() {
       setNewProdName('');
       setNewProdDesc('');
       setNewProdImg('');
-      setPrice25(''); setPrice35(''); setPrice50(''); setPrice100(''); setRegularPrice('');
+      setRegularPrice('');
+      setEnableSizes(false);
+      setSize1Price(''); setSize2Price(''); setSize3Price(''); setSize4Price('');
       alert('تم إضافة المنتج بنجاح وحفظه على السحابة أونلاين!');
     }
   };
@@ -514,8 +529,9 @@ export default function Home() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
             {allProducts.filter(item => activeCategory === 'all' || item.category === activeCategory).length > 0 ? (
               allProducts.filter(item => activeCategory === 'all' || item.category === activeCategory).map(product => {
-                const currentSize = selectedSizes[product.id] || '50ml';
-                const currentPrice = product.sizes ? (product.sizes[currentSize] || product.price) : product.price;
+                const availableSizes = product.sizes ? Object.keys(product.sizes) : [];
+                const currentSize = selectedSizes[product.id] || (availableSizes.length > 0 ? availableSizes[0] : '');
+                const currentPrice = product.sizes && currentSize ? (product.sizes[currentSize] || product.price) : product.price;
 
                 return (
                   <div key={product.id} style={{ backgroundColor: '#121212', border: '1px solid rgba(212,175,55,0.3)', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
@@ -526,11 +542,11 @@ export default function Home() {
                       <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#fff', margin: '0 0 6px 0' }}>{product.name}</h3>
                       <p style={{ fontSize: '13px', color: '#9ca3af', margin: '0 0 12px 0', minHeight: '36px', lineHeight: '1.5' }}>{product.desc}</p>
                       
-                      {product.category === 'perfumes' && product.sizes && (
+                      {availableSizes.length > 0 && (
                         <div style={{ marginBottom: '14px', background: '#181818', padding: '10px', borderRadius: '10px', border: '1px solid #333' }}>
-                          <span style={{ fontSize: '12px', color: '#D4AF37', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>اختر حجم العطر:</span>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-                            {['25ml', '35ml', '50ml', '100ml'].map(sz => (
+                          <span style={{ fontSize: '12px', color: '#D4AF37', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>اختر الحجم:</span>
+                          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(availableSizes.length, 4)}, 1fr)`, gap: '6px' }}>
+                            {availableSizes.map(sz => (
                               <button 
                                 key={sz} 
                                 onClick={() => setSelectedSizes({...selectedSizes, [product.id]: sz})}
@@ -547,7 +563,7 @@ export default function Home() {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #222', paddingTop: '12px' }}>
                       <span style={{ fontSize: '18px', fontWeight: '900', color: '#D4AF37' }}>{currentPrice} ج.م</span>
                       <button 
-                        onClick={() => handleAddToCart(product.name, currentPrice, product.category === 'perfumes' ? currentSize : 'حجم قياسي')} 
+                        onClick={() => handleAddToCart(product.name, currentPrice, availableSizes.length > 0 ? currentSize : 'حجم قياسي')} 
                         style={{ background: 'linear-gradient(to right, #D4AF37, #aa820a)', color: '#000', fontWeight: 'bold', padding: '10px 16px', borderRadius: '10px', border: 'none', cursor: 'pointer', fontSize: '14px' }}
                       >
                         إضافة للسلة
@@ -676,61 +692,137 @@ export default function Home() {
         </div>
       )}
 
-      {/* لوحة الأدمن (مخفية ولا تفتح إلا بالرابط السري) */}
+      {/* لوحة الأدمن (مخفية ولا تفتح إلا بالرابط السري) - بتصميم ملون وفاخر */}
       {isAdminOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 1000 }}>
-          <div style={{ backgroundColor: '#121212', border: '1px solid #D4AF37', borderRadius: '18px', width: '100%', maxWidth: '550px', maxHeight: '90vh', overflowY: 'auto', padding: '24px', position: 'relative' }}>
-            <button onClick={() => setIsAdminOpen(false)} style={{ position: 'absolute', top: '16px', left: '16px', background: 'none', border: 'none', color: '#9ca3af', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 1000 }}>
+          <div style={{ background: 'linear-gradient(135deg, #18150f 0%, #121212 100%)', border: '2px solid #D4AF37', borderRadius: '22px', width: '100%', maxWidth: '620px', maxHeight: '92vh', overflowY: 'auto', padding: '28px', position: 'relative', boxShadow: '0 12px 35px rgba(212,175,55,0.25)' }}>
+            <button onClick={() => setIsAdminOpen(false)} style={{ position: 'absolute', top: '18px', left: '18px', background: '#222', border: '1px solid #D4AF37', color: '#D4AF37', width: '36px', height: '36px', borderRadius: '50%', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>✕</button>
 
-            <h2 style={{ fontSize: '20px', color: '#D4AF37', textAlign: 'center', marginBottom: '20px', fontWeight: '900' }}>⚙ لوحة تحكم الأدمن (متصلة بقاعدة البيانات)</h2>
-
-            <form onSubmit={handleAddCategory} style={{ backgroundColor: '#181818', padding: '14px', borderRadius: '12px', marginBottom: '16px', border: '1px solid #333' }}>
-              <h3 style={{ fontSize: '15px', color: '#D4AF37', margin: '0 0 10px 0', fontWeight: 'bold' }}>📁 إضافة قسم جديد:</h3>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <input type="text" placeholder="اسم القسم (مثال: 💍 ساعات فاخرة)" value={newCatName} onChange={(e) => setNewCatName(e.target.value)} style={{ width: '50%', background: '#111', border: '1px solid #444', color: '#fff', padding: '10px', borderRadius: '8px', fontSize: '13px' }} />
-                <input type="text" placeholder="معرف القسم (مثال: watches)" value={newCatId} onChange={(e) => setNewCatId(e.target.value)} style={{ width: '50%', background: '#111', border: '1px solid #444', color: '#fff', padding: '10px', borderRadius: '8px', fontSize: '13px' }} />
+            <div style={{ textAlign: 'center', marginBottom: '22px' }}>
+              <div style={{ display: 'inline-block', background: 'rgba(212,175,55,0.15)', border: '1px solid #D4AF37', padding: '6px 16px', borderRadius: '20px', color: '#D4AF37', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>
+                ⭐ لوحة الإدارة العليا
               </div>
-              <button type="submit" style={{ width: '100%', marginTop: '8px', background: '#222', color: '#D4AF37', border: '1px solid #D4AF37', fontWeight: 'bold', padding: '8px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}>حفظ القسم في القاعدة</button>
+              <h2 style={{ fontSize: '22px', color: '#fff', margin: 0, fontWeight: '900' }}>لوحة تحكم <span style={{ color: '#D4AF37' }}>هندسة بيرفيوم</span></h2>
+            </div>
+
+            {/* قسم تعديل أسعار الورد والإضافات */}
+            <div style={{ backgroundColor: 'rgba(212, 175, 55, 0.06)', border: '1px solid rgba(212, 175, 55, 0.3)', padding: '16px', borderRadius: '14px', marginBottom: '18px' }}>
+              <h3 style={{ fontSize: '15px', color: '#D4AF37', margin: '0 0 12px 0', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                🌹 تعديل أسعار الورد والإضافات (حسب الطلب):
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', color: '#ccc', display: 'block', marginBottom: '4px' }}>سعر الوردة (ج.م):</label>
+                  <input 
+                    type="number" 
+                    value={storeSettings.rosePrice} 
+                    onChange={(e) => setStoreSettings({...storeSettings, rosePrice: parseFloat(e.target.value) || 0})}
+                    style={{ width: '100%', background: '#111', border: '1px solid #D4AF37', color: '#D4AF37', padding: '8px', borderRadius: '8px', fontSize: '14px', fontWeight: 'bold', textAlign: 'center' }} 
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', color: '#ccc', display: 'block', marginBottom: '4px' }}>سعر البيبي فلاور:</label>
+                  <input 
+                    type="number" 
+                    value={storeSettings.babyBreathPrice} 
+                    onChange={(e) => setStoreSettings({...storeSettings, babyBreathPrice: parseFloat(e.target.value) || 0})}
+                    style={{ width: '100%', background: '#111', border: '1px solid #D4AF37', color: '#D4AF37', padding: '8px', borderRadius: '8px', fontSize: '14px', fontWeight: 'bold', textAlign: 'center' }} 
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', color: '#ccc', display: 'block', marginBottom: '4px' }}>سعر الفراشات:</label>
+                  <input 
+                    type="number" 
+                    value={storeSettings.butterflyPrice} 
+                    onChange={(e) => setStoreSettings({...storeSettings, butterflyPrice: parseFloat(e.target.value) || 0})}
+                    style={{ width: '100%', background: '#111', border: '1px solid #D4AF37', color: '#D4AF37', padding: '8px', borderRadius: '8px', fontSize: '14px', fontWeight: 'bold', textAlign: 'center' }} 
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* قسم إضافة قسم جديد */}
+            <form onSubmit={handleAddCategory} style={{ backgroundColor: '#161616', padding: '16px', borderRadius: '14px', marginBottom: '18px', border: '1px solid #333' }}>
+              <h3 style={{ fontSize: '15px', color: '#D4AF37', margin: '0 0 10px 0', fontWeight: 'bold' }}>📁 إضافة قسم جديد:</h3>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <input type="text" placeholder="اسم القسم (مثال: 💍 ساعات فاخرة)" value={newCatName} onChange={(e) => setNewCatName(e.target.value)} style={{ width: '50%', background: '#111', border: '1px solid #444', color: '#fff', padding: '10px', borderRadius: '8px', fontSize: '13px' }} />
+                <input type="text" placeholder="معرف القسم بالإنجليزية (مثال: watches)" value={newCatId} onChange={(e) => setNewCatId(e.target.value)} style={{ width: '50%', background: '#111', border: '1px solid #444', color: '#fff', padding: '10px', borderRadius: '8px', fontSize: '13px' }} />
+              </div>
+              <button type="submit" style={{ width: '100%', marginTop: '10px', background: 'linear-gradient(to right, #D4AF37, #aa820a)', color: '#000', border: 'none', fontWeight: 'bold', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', boxShadow: '0 2px 8px rgba(212,175,55,0.3)' }}>💾 حفظ القسم في القاعدة</button>
             </form>
 
-            <form onSubmit={handleAddProduct} style={{ backgroundColor: '#181818', padding: '14px', borderRadius: '12px', marginBottom: '16px', border: '1px solid #333' }}>
-              <h3 style={{ fontSize: '15px', color: '#D4AF37', margin: '0 0 10px 0', fontWeight: 'bold' }}>➕ إضافة منتج جديد:</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <input type="text" placeholder="اسم المنتج" value={newProdName} onChange={(e) => setNewProdName(e.target.value)} required style={{ background: '#111', border: '1px solid #444', color: '#fff', padding: '10px', borderRadius: '8px', fontSize: '14px' }} />
+            {/* قسم إضافة منتج جديد مع دعم الأحجام الاختيارية */}
+            <form onSubmit={handleAddProduct} style={{ backgroundColor: '#161616', padding: '16px', borderRadius: '14px', marginBottom: '10px', border: '1px solid #333' }}>
+              <h3 style={{ fontSize: '15px', color: '#D4AF37', margin: '0 0 12px 0', fontWeight: 'bold' }}>➕ إضافة منتج جديد:</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 
-                <select value={newProdCat} onChange={(e) => setNewProdCat(e.target.value)} style={{ width: '100%', background: '#111', border: '1px solid #444', color: '#fff', padding: '10px', borderRadius: '8px', fontSize: '14px' }}>
-                  <option value="perfumes">🌸 عطور فاخرة</option>
-                  <option value="flowers">🌹 بوكيهات الورد</option>
-                  <option value="watches">⌚ الساعات</option>
-                  <option value="glasses">👓 النظارات</option>
-                  <option value="mugs">☕ المجات</option>
-                  {categories.filter(c => !['all', 'perfumes', 'flowers', 'watches', 'glasses', 'mugs'].includes(c.id)).map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+                <div>
+                  <label style={{ fontSize: '12px', color: '#aaa', display: 'block', marginBottom: '4px' }}>اسم المنتج:</label>
+                  <input type="text" placeholder="مثال: عطر الملك الفاخر" value={newProdName} onChange={(e) => setNewProdName(e.target.value)} required style={{ width: '100%', background: '#111', border: '1px solid #444', color: '#fff', padding: '10px', borderRadius: '8px', fontSize: '14px' }} />
+                </div>
+                
+                <div>
+                  <label style={{ fontSize: '12px', color: '#aaa', display: 'block', marginBottom: '4px' }}>القسم:</label>
+                  <select value={newProdCat} onChange={(e) => setNewProdCat(e.target.value)} style={{ width: '100%', background: '#111', border: '1px solid #444', color: '#fff', padding: '10px', borderRadius: '8px', fontSize: '14px' }}>
+                    <option value="perfumes">🌸 عطور فاخرة</option>
+                    <option value="flowers">🌹 بوكيهات الورد</option>
+                    <option value="watches">⌚ الساعات</option>
+                    <option value="glasses">👓 النظارات</option>
+                    <option value="mugs">☕ المجات</option>
+                    {categories.filter(c => !['all', 'perfumes', 'flowers', 'watches', 'glasses', 'mugs'].includes(c.id)).map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
 
-                {newProdCat === 'perfumes' ? (
-                  <div style={{ background: '#111', padding: '10px', borderRadius: '8px', border: '1px solid #444' }}>
-                    <span style={{ fontSize: '12px', color: '#D4AF37', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>أسعار العطر لكل الأحجام (ج.م):</span>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-                      <input type="number" placeholder="25 ملي" value={price25} onChange={(e) => setPrice25(e.target.value)} style={{ background: '#222', border: '1px solid #555', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '12px' }} />
-                      <input type="number" placeholder="35 ملي" value={price35} onChange={(e) => setPrice35(e.target.value)} style={{ background: '#222', border: '1px solid #555', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '12px' }} />
-                      <input type="number" placeholder="50 ملي" value={price50} onChange={(e) => setPrice50(e.target.value)} style={{ background: '#222', border: '1px solid #555', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '12px' }} />
-                      <input type="number" placeholder="100 ملي" value={price100} onChange={(e) => setPrice100(e.target.value)} style={{ background: '#222', border: '1px solid #555', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '12px' }} />
-                    </div>
+                {/* السعر العادي أو تفعيل أحجام متعددة اختيارياً */}
+                {!enableSizes ? (
+                  <div>
+                    <label style={{ fontSize: '12px', color: '#aaa', display: 'block', marginBottom: '4px' }}>السعر الأساسي (ج.م):</label>
+                    <input type="number" placeholder="مثال: 350" value={regularPrice} onChange={(e) => setRegularPrice(e.target.value)} required style={{ width: '100%', background: '#111', border: '1px solid #444', color: '#fff', padding: '10px', borderRadius: '8px', fontSize: '14px' }} />
                   </div>
-                ) : (
-                  <input type="number" placeholder="السعر (ج.م)" value={regularPrice} onChange={(e) => setRegularPrice(e.target.value)} required style={{ background: '#111', border: '1px solid #444', color: '#fff', padding: '10px', borderRadius: '8px', fontSize: '14px' }} />
-                )}
+                ) : null}
+
+                {/* زر وتفعيل الأحجام الاختيارية */}
+                <div style={{ background: '#1a1a1a', padding: '12px', borderRadius: '10px', border: '1px solid rgba(212,175,55,0.4)' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: enableSizes ? '10px' : 0 }}>
+                    <input type="checkbox" checked={enableSizes} onChange={(e) => setEnableSizes(e.target.checked)} style={{ width: '18px', height: '18px', accentColor: '#D4AF37' }} />
+                    <span style={{ fontSize: '13px', color: '#D4AF37', fontWeight: 'bold' }}>تفعيل أحجام متعددة وأسعار مختلفة (اختياري للبرفان أو غيره)</span>
+                  </label>
+
+                  {enableSizes && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginTop: '8px' }}>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <input type="text" value={size1Name} onChange={(e) => setSize1Name(e.target.value)} placeholder="اسم الحجم" style={{ width: '40%', background: '#111', border: '1px solid #444', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '12px' }} />
+                        <input type="number" value={size1Price} onChange={(e) => setSize1Price(e.target.value)} placeholder="السعر" style={{ width: '60%', background: '#111', border: '1px solid #444', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '12px' }} />
+                      </div>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <input type="text" value={size2Name} onChange={(e) => setSize2Name(e.target.value)} placeholder="اسم الحجم" style={{ width: '40%', background: '#111', border: '1px solid #444', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '12px' }} />
+                        <input type="number" value={size2Price} onChange={(e) => setSize2Price(e.target.value)} placeholder="السعر" style={{ width: '60%', background: '#111', border: '1px solid #444', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '12px' }} />
+                      </div>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <input type="text" value={size3Name} onChange={(e) => setSize3Name(e.target.value)} placeholder="اسم الحجم" style={{ width: '40%', background: '#111', border: '1px solid #444', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '12px' }} />
+                        <input type="number" value={size3Price} onChange={(e) => setSize3Price(e.target.value)} placeholder="السعر" style={{ width: '60%', background: '#111', border: '1px solid #444', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '12px' }} />
+                      </div>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <input type="text" value={size4Name} onChange={(e) => setSize4Name(e.target.value)} placeholder="اسم الحجم" style={{ width: '40%', background: '#111', border: '1px solid #444', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '12px' }} />
+                        <input type="number" value={size4Price} onChange={(e) => setSize4Price(e.target.value)} placeholder="السعر" style={{ width: '60%', background: '#111', border: '1px solid #444', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '12px' }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 <div>
                   <label style={{ fontSize: '12px', color: '#aaa', display: 'block', marginBottom: '4px' }}>رفع صورة المنتج من الجهاز:</label>
                   <input type="file" accept="image/*" onChange={(e) => { if(e.target.files && e.target.files[0]) { setNewProdImg(URL.createObjectURL(e.target.files[0])); } }} style={{ fontSize: '12px', color: '#ccc', width: '100%' }} />
                 </div>
 
-                <input type="text" placeholder="وصف قصير للمنتج" value={newProdDesc} onChange={(e) => setNewProdDesc(e.target.value)} style={{ background: '#111', border: '1px solid #444', color: '#fff', padding: '10px', borderRadius: '8px', fontSize: '14px' }} />
+                <div>
+                  <label style={{ fontSize: '12px', color: '#aaa', display: 'block', marginBottom: '4px' }}>وصف قصير للمنتج:</label>
+                  <input type="text" placeholder="اكتب وصفاً جذاباً..." value={newProdDesc} onChange={(e) => setNewProdDesc(e.target.value)} style={{ width: '100%', background: '#111', border: '1px solid #444', color: '#fff', padding: '10px', borderRadius: '8px', fontSize: '14px' }} />
+                </div>
                 
-                <button type="submit" style={{ background: '#D4AF37', color: '#000', fontWeight: 'bold', border: 'none', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontSize: '15px' }}>حفظ ونشر المنتج أونلاين</button>
+                <button type="submit" style={{ background: 'linear-gradient(to right, #D4AF37, #aa820a)', color: '#000', fontWeight: 'bold', border: 'none', padding: '14px', borderRadius: '10px', cursor: 'pointer', fontSize: '15px', marginTop: '6px', boxShadow: '0 4px 15px rgba(212,175,55,0.3)' }}>✨ حفظ ونشر المنتج أونلاين</button>
               </div>
             </form>
 

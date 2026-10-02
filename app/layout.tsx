@@ -12,8 +12,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ar" dir="rtl">
-      <body className="bg-[#0a0a0a] text-white">
+      <body>
         {children}
-      </body>    </html>
+      </body>
+    </html>
   );
 }
