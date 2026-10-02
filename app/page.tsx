@@ -30,8 +30,8 @@ export default function Home() {
   const [selectedSizes, setSelectedSizes] = useState({});
 
   // بيانات من Supabase
-  const [categories, setCategories] = useState([]);
-  const [allProducts, setAllProducts] = useState([]);
+ const [categories, setCategories] = useState<any[]>([]);
+const [allProducts, setAllProducts] = useState<any[]>([]);
 
   // جلب البيانات من Supabase عند فتح الموقع
   useEffect(() => {
@@ -657,11 +657,11 @@ export default function Home() {
                 <input type="text" placeholder="اسم المنتج" value={newProdName} onChange={(e) => setNewProdName(e.target.value)} required style={{ background: '#111', border: '1px solid #444', color: '#fff', padding: '10px', borderRadius: '8px', fontSize: '14px' }} />
                 
                 <select value={newProdCat} onChange={(e) => setNewProdCat(e.target.value)} style={{ width: '100%', background: '#111', border: '1px solid #444', color: '#fff', padding: '10px', borderRadius: '8px', fontSize: '14px' }}>
-                  <option value="perfumes">🌸 عطور فاخرة</option>
-                  <option value="flowers">🌹 بوكيهات الورد</option>
-                  <option value="watches">⌚ الساعات</option>
-                  <option value="glasses">👓 النظارات</option>
-                  <option value="mugs">☕ المجات</option>
+                  <option value="perfumes">'🌸 عطور فاخرة'</option>
+                  <option value="flowers">'🌹 بوكيهات الورد'</option>
+                  <option value="watches">'⌚ الساعات'</option>
+                  <option value="glasses">'👓 النظارات'</option>
+                  <option value="mugs">☕ 'المجات'</option>
                   {categories.filter(c => !['all', 'perfumes', 'flowers', 'watches', 'glasses', 'mugs'].includes(c.id)).map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
