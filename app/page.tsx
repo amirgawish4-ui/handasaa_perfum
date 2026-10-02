@@ -2,6 +2,33 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
+type Category = {
+  id: string;
+  name: string;
+};
+
+type Product = {
+  id: number | string;
+  name: string;
+  category: string;
+  price: number;
+  desc: string;
+  image: string;
+  sizes?: Record<string, number>;
+};
+
+type CartItem = {
+  id: number;
+  name: string;
+  price: number;
+  details: string;
+};
+
+type BoxSize = {
+  name: string;
+  price: number;
+};
+
 export default function Home() {
   const TAYEEB_URL = "https://tatayab.vercel.app/";
   const TBR_URL = "https://tepar-ten.vercel.app/";
@@ -14,7 +41,7 @@ export default function Home() {
   
   const ADMIN_PASSWORD = "123";
 
-  const [cartItems, setCartItems] = useState([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   const [clientName, setClientName] = useState('');
@@ -27,11 +54,11 @@ export default function Home() {
   const [isBotOpen, setIsBotOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
 
-  const [selectedSizes, setSelectedSizes] = useState({});
+  const [selectedSizes, setSelectedSizes] = useState<Record<string | number, string>>({});
 
   // بيانات من Supabase
- const [categories, setCategories] = useState<any[]>([]);
-const [allProducts, setAllProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
 
   // جلب البيانات من Supabase عند فتح الموقع
   useEffect(() => {
@@ -40,36 +67,44 @@ const [allProducts, setAllProducts] = useState<any[]>([]);
     if (adminKey === ADMIN_PASSWORD) {
       setIsAdminOpen(true);
     }
+
+    const fetchData = async () => {
+      try {
+        const { data: catData } = await supabase.from('categories').select('*');
+
+        if (catData) {
+          setCategories([
+            { id: 'all', name: '✨ الكل' },
+            ...(catData as Category[])
+          ]);
+        }
+
+        const { data: prodData } = await supabase.from('products').select('*');
+
+        if (prodData && prodData.length > 0) {
+          setAllProducts(prodData as Product[]);
+        } else {
+          // منتجات افتراضية لو القاعدة فارغة أول مرة
+          setAllProducts([
+            { 
+              id: 1, 
+              name: 'عطر هندسة الملكي الفاخر', 
+              category: 'perfumes', 
+              price: 450, 
+              sizes: { '25ml': 200, '35ml': 280, '50ml': 450, '100ml': 750 },
+              desc: 'عطر رجالي/نسائي فخم يدوم طويلاً', 
+              image: 'https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=300&q=80' 
+            },
+            { id: 2, name: 'بوكيه ورد جوري أحمر فاخر', category: 'flowers', price: 300, desc: 'مع بوكس اسطواني أنيق وتنسيق ملكي', image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=300&q=80' },
+          ]);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+
     fetchData();
   }, []);
-
-  const fetchData = async () => {
-    try {
-      const { data: catData } = await supabase.from('categories').select('*');
-      if (catData) setCategories([{ id: 'all', name: '✨ الكل' }, ...catData]);
-
-      const { data: prodData } = await supabase.from('products').select('*');
-      if (prodData && prodData.length > 0) {
-        setAllProducts(prodData);
-      } else {
-        // منتجات افتراضية لو القاعدة فارغة أول مرة
-        setAllProducts([
-          { 
-            id: 1, 
-            name: 'عطر هندسة الملكي الفاخر', 
-            category: 'perfumes', 
-            price: 450, 
-            sizes: { '25ml': 200, '35ml': 280, '50ml': 450, '100ml': 750 },
-            desc: 'عطر رجالي/نسائي فخم يدوم طويلاً', 
-            image: 'https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=300&q=80' 
-          },
-          { id: 2, name: 'بوكيه ورد جوري أحمر فاخر', category: 'flowers', price: 300, desc: 'مع بوكس اسطواني أنيق وتنسيق ملكي', image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=300&q=80' },
-        ]);
-      }
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    }
-  };
 
   const [storeSettings, setStoreSettings] = useState({
     rosePrice: 30,
@@ -77,7 +112,7 @@ const [allProducts, setAllProducts] = useState<any[]>([]);
     butterflyPrice: 30,
   });
 
-  const getShippingFee = (gov) => {
+  const getShippingFee = (gov: string) => {
     const tier65 = ['كفر الشيخ', 'البحيرة'];
     const tier80 = ['الإسكندرية', 'الدقهلية', 'الغربية', 'المنوفية', 'الشرقية', 'دمياط', 'بورسعيد', 'الإسماعيلية', 'السويس', 'مطروح'];
     const tier90 = ['القاهرة', 'الجيزة', 'القليوبية', 'الفيوم'];
@@ -92,22 +127,28 @@ const [allProducts, setAllProducts] = useState<any[]>([]);
   const subtotal = cartItems.reduce((sum, item) => sum + item.price, 0);
   const finalTotal = subtotal + (cartItems.length > 0 ? currentShipping : 0);
 
-  const handleAddToCart = (productName, price, details = '') => {
-    const newItem = {
+  const handleAddToCart = (
+    productName: string,
+    price: number,
+    details: string = ''
+  ) => {
+    const newItem: CartItem = {
       id: Date.now() + Math.random(),
       name: productName,
       price: price,
       details: details
     };
+
     setCartItems(prev => [...prev, newItem]);
+
     alert(`تم إضافة "${productName}" إلى السلة بنجاح! 🛒`);
   };
 
-  const handleRemoveFromCart = (id) => {
+  const handleRemoveFromCart = (id: number) => {
     setCartItems(cartItems.filter(item => item.id !== id));
   };
 
-  const handleSendOrderToWhatsApp = (e) => {
+  const handleSendOrderToWhatsApp = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!clientName || !clientPhone || !clientAddress) {
       alert('الرجاء إكمال كافة بيانات الاسم, رقم الهاتف, والعنوان.');
@@ -137,19 +178,19 @@ const [allProducts, setAllProducts] = useState<any[]>([]);
   };
 
   const [boxStep, setBoxStep] = useState('select-size');
-  const [selectedBoxSize, setSelectedBoxSize] = useState(null);
-  const [boxSelectedItems, setBoxSelectedItems] = useState([]);
+  const [selectedBoxSize, setSelectedBoxSize] = useState<BoxSize | null>(null);
+  const [boxSelectedItems, setBoxSelectedItems] = useState<Product[]>([]);
 
   const [flowerStep, setFlowerStep] = useState(1);
   const [roseCount, setRoseCount] = useState(10);
   const [customRoseInput, setCustomRoseInput] = useState('');
   const [flowerAddons, setFlowerAddons] = useState({ babyBreath: false, butterflies: false });
-  const [customBouquetFile, setCustomBouquetFile] = useState(null);
+  const [customBouquetFile, setCustomBouquetFile] = useState<File | null>(null);
 
   const [botStep, setBotStep] = useState(1);
   const [botData, setBotData] = useState({ target: '', age: '', occasion: '' });
 
-  const handleCategoryClick = (catId) => {
+  const handleCategoryClick = (catId: string) => {
     if (catId === 'simulation-perfumes') {
       window.open(TAYEEB_URL, '_blank');
       return;
@@ -178,16 +219,17 @@ const [allProducts, setAllProducts] = useState<any[]>([]);
   const [newCatId, setNewCatId] = useState('');
 
   // إضافة منتج وحفظه مباشرة في Supabase
-  const handleAddProduct = async (e) => {
+  const handleAddProduct = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!newProdName) return;
 
-    let productData = {
+    let productData: Product = {
       id: Date.now(),
       name: newProdName,
       category: newProdCat,
       desc: newProdDesc || 'منتج فاخر من هندسة بيرفيوم',
       image: newProdImg || LOGO_URL,
+      price: 0,
     };
 
     if (newProdCat === 'perfumes') {
@@ -217,7 +259,7 @@ const [allProducts, setAllProducts] = useState<any[]>([]);
   };
 
   // إضافة قسم جديد وحفظه في Supabase
-  const handleAddCategory = async (e) => {
+  const handleAddCategory = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!newCatName || !newCatId) return;
 
@@ -439,7 +481,7 @@ const [allProducts, setAllProducts] = useState<any[]>([]);
 
                 <div style={{ background: '#181818', padding: '14px', borderRadius: '10px', marginBottom: '16px', border: '1px solid #444' }}>
                   <span style={{ fontSize: '13px', color: '#9ca3af', display: 'block', marginBottom: '8px' }}>أو ارفع صورة بوكيه خاص من جهازك:</span>
-                  <input type="file" accept="image/*" onChange={(e) => setCustomBouquetFile(e.target.files[0])} style={{ fontSize: '13px', color: '#ccc', width: '100%' }} />
+                  <input type="file" accept="image/*" onChange={(e) => { if(e.target.files && e.target.files[0]) setCustomBouquetFile(e.target.files[0]); }} style={{ fontSize: '13px', color: '#ccc', width: '100%' }} />
                   {customBouquetFile && <span style={{ fontSize: '12px', color: '#25D366', display: 'block', marginTop: '6px' }}>✓ تم رفع الصورة بنجاح: {customBouquetFile.name}</span>}
                 </div>
 
@@ -606,7 +648,7 @@ const [allProducts, setAllProducts] = useState<any[]>([]);
 
                   <div>
                     <label style={{ fontSize: '13px', color: '#ccc', display: 'block', marginBottom: '4px' }}>العنوان بالتفصيل:</label>
-                    <textarea placeholder="الشارع، رقم العمارة، علامة مميزة" value={clientAddress} onChange={(e) => setClientAddress(e.target.value)} required rows="2" style={{ width: '100%', background: '#1a1a1a', border: '1px solid #444', color: '#fff', padding: '10px', borderRadius: '8px', fontSize: '14px', resize: 'none' }}></textarea>
+                    <textarea placeholder="الشارع، رقم العمارة، علامة مميزة" value={clientAddress} onChange={(e) => setClientAddress(e.target.value)} required rows={2} style={{ width: '100%', background: '#1a1a1a', border: '1px solid #444', color: '#fff', padding: '10px', borderRadius: '8px', fontSize: '14px', resize: 'none' }}></textarea>
                   </div>
 
                   <div style={{ background: '#1a1a1a', padding: '12px', borderRadius: '10px', border: '1px solid rgba(212,175,55,0.3)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -657,11 +699,11 @@ const [allProducts, setAllProducts] = useState<any[]>([]);
                 <input type="text" placeholder="اسم المنتج" value={newProdName} onChange={(e) => setNewProdName(e.target.value)} required style={{ background: '#111', border: '1px solid #444', color: '#fff', padding: '10px', borderRadius: '8px', fontSize: '14px' }} />
                 
                 <select value={newProdCat} onChange={(e) => setNewProdCat(e.target.value)} style={{ width: '100%', background: '#111', border: '1px solid #444', color: '#fff', padding: '10px', borderRadius: '8px', fontSize: '14px' }}>
-                  <option value="perfumes">'🌸 عطور فاخرة'</option>
-                  <option value="flowers">'🌹 بوكيهات الورد'</option>
-                  <option value="watches">'⌚ الساعات'</option>
-                  <option value="glasses">'👓 النظارات'</option>
-                  <option value="mugs">☕ 'المجات'</option>
+                  <option value="perfumes">🌸 عطور فاخرة</option>
+                  <option value="flowers">🌹 بوكيهات الورد</option>
+                  <option value="watches">⌚ الساعات</option>
+                  <option value="glasses">👓 النظارات</option>
+                  <option value="mugs">☕ المجات</option>
                   {categories.filter(c => !['all', 'perfumes', 'flowers', 'watches', 'glasses', 'mugs'].includes(c.id)).map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
@@ -683,7 +725,7 @@ const [allProducts, setAllProducts] = useState<any[]>([]);
 
                 <div>
                   <label style={{ fontSize: '12px', color: '#aaa', display: 'block', marginBottom: '4px' }}>رفع صورة المنتج من الجهاز:</label>
-                  <input type="file" accept="image/*" onChange={(e) => { if(e.target.files[0]) { setNewProdImg(URL.createObjectURL(e.target.files[0])); } }} style={{ fontSize: '12px', color: '#ccc', width: '100%' }} />
+                  <input type="file" accept="image/*" onChange={(e) => { if(e.target.files && e.target.files[0]) { setNewProdImg(URL.createObjectURL(e.target.files[0])); } }} style={{ fontSize: '12px', color: '#ccc', width: '100%' }} />
                 </div>
 
                 <input type="text" placeholder="وصف قصير للمنتج" value={newProdDesc} onChange={(e) => setNewProdDesc(e.target.value)} style={{ background: '#111', border: '1px solid #444', color: '#fff', padding: '10px', borderRadius: '8px', fontSize: '14px' }} />
@@ -720,7 +762,7 @@ const [allProducts, setAllProducts] = useState<any[]>([]);
             {botStep === 2 && (
               <div>
                 <p style={{ fontSize: '14px', fontWeight: '600', color: '#e5e7eb', marginBottom: '10px' }}>2. المناسبة إيه؟</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <button onClick={() => { setBotData({...botData, occasion: 'عيد ميلاد'}); setBotStep(3); }} style={{ padding: '10px', background: '#181818', border: '1px solid #333', borderRadius: '10px', color: '#fff', fontSize: '13px', cursor: 'pointer', textAlign: 'right' }}>🎂 عيد ميلاد</button>
                   <button onClick={() => { setBotData({...botData, occasion: 'عيد زواج أو حب'}); setBotStep(3); }} style={{ padding: '10px', background: '#181818', border: '1px solid #333', borderRadius: '10px', color: '#fff', fontSize: '13px', cursor: 'pointer', textAlign: 'right' }}>💖 عيد زواج أو حب</button>
                 </div>
